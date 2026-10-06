@@ -1,0 +1,16 @@
+# Host installs and build output are rebuilt inside the image.
+node_modules
+dist
+coverage
+*.tsbuildinfo
+src/generated
+
+# Never copy local environment files (they may hold ANTHROPIC_API_KEY) into an image.
+.env
+.env.*
+!.env.example
+
+Dockerfile
+.dockerignore
+*.log
+README.md

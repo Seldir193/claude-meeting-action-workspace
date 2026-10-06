@@ -1,0 +1,67 @@
+:host {
+  display: block;
+}
+
+.card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--human);
+  border-radius: var(--radius);
+
+  // Unreviewed proposals look provisional until a human touches them.
+  &--proposal {
+    background: var(--ai-soft);
+    border-style: dashed;
+    border-left-style: solid;
+    border-left-color: var(--ai);
+  }
+
+  &--done .card__task {
+    color: var(--muted);
+    text-decoration: line-through;
+  }
+}
+
+.card__head,
+.card__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.card__head {
+  align-items: center;
+}
+
+.card__task {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.card__meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.5rem 1rem;
+  margin: 0;
+
+  dt {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.card__status {
+  display: grid;
+  gap: 0.25rem;
+}

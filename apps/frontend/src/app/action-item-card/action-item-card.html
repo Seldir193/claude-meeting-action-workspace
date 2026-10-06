@@ -1,0 +1,77 @@
+<article
+  class="card"
+  [class.card--proposal]="provenance() === 'AI_PROPOSAL'"
+  [class.card--done]="item().status === 'DONE'"
+  [attr.aria-busy]="busy()"
+>
+  <header class="card__head">
+    <span class="badge" [attr.data-provenance]="provenance()">{{ provenanceLabels[provenance()] }}</span>
+    <span class="badge" [attr.data-priority]="item().priority">
+      {{ priorityLabels[item().priority] }} priority
+    </span>
+  </header>
+
+  @if (editing()) {
+    <app-action-item-form
+      [item]="item()"
+      [busy]="locked()"
+      submitLabel="Save changes"
+      (submitted)="save($event)"
+      (cancelled)="editing.set(false)"
+    />
+  } @else {
+    <p class="card__task">{{ item().task }}</p>
+
+    <dl class="card__meta">
+      <div>
+        <dt>Owner</dt>
+        <dd [class.muted]="!item().owner">{{ item().owner ?? 'Unassigned' }}</dd>
+      </div>
+      <div>
+        <dt>Deadline</dt>
+        <dd [class.muted]="!item().deadline">
+          {{ item().deadline ? (item().deadline | date: 'mediumDate') : 'No deadline' }}
+        </dd>
+      </div>
+    </dl>
+
+    <footer class="card__foot">
+      <label class="card__status">
+        <span class="field__label">Status</span>
+        <select #statusSelect [disabled]="locked()" (change)="changeStatus(statusSelect)">
+          @for (option of statuses; track option) {
+            <option [value]="option" [selected]="option === item().status">
+              {{ statusLabels[option] }}
+            </option>
+          }
+        </select>
+      </label>
+
+      <div class="actions">
+        @if (confirmingDelete()) {
+          <span class="muted">Delete this item?</span>
+          <button type="button" class="btn btn--danger" [disabled]="locked()" (click)="remove()">
+            {{ busy() ? 'Deleting…' : 'Delete' }}
+          </button>
+          <button type="button" class="btn" [disabled]="locked()" (click)="confirmingDelete.set(false)">
+            Keep
+          </button>
+        } @else {
+          @if (provenance() === 'AI_PROPOSAL') {
+            <button type="button" class="btn btn--primary" [disabled]="locked()" (click)="accept()">
+              Accept
+            </button>
+          }
+          <button type="button" class="btn" [disabled]="locked()" (click)="editing.set(true)">Edit</button>
+          <button type="button" class="btn" [disabled]="locked()" (click)="confirmingDelete.set(true)">
+            Delete
+          </button>
+        }
+      </div>
+    </footer>
+  }
+
+  @if (error(); as message) {
+    <p class="alert alert--error" role="alert">{{ message }}</p>
+  }
+</article>

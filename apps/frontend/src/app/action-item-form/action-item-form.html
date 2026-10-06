@@ -1,0 +1,43 @@
+<form (ngSubmit)="submit()">
+  <fieldset class="form-grid" [disabled]="busy()">
+    <label class="field form-grid__wide">
+      <span class="field__label">Task</span>
+      <textarea name="task" rows="2" maxlength="500" required [(ngModel)]="task"></textarea>
+    </label>
+
+    <label class="field">
+      <span class="field__label">Owner</span>
+      <input name="owner" type="text" maxlength="120" placeholder="Unassigned" [(ngModel)]="owner" />
+    </label>
+
+    <label class="field">
+      <span class="field__label">Deadline</span>
+      <input name="deadline" type="date" [(ngModel)]="deadline" />
+    </label>
+
+    <label class="field">
+      <span class="field__label">Priority</span>
+      <select name="priority" [(ngModel)]="priority">
+        @for (option of priorities; track option) {
+          <option [value]="option">{{ priorityLabels[option] }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="field">
+      <span class="field__label">Status</span>
+      <select name="status" [(ngModel)]="status">
+        @for (option of statuses; track option) {
+          <option [value]="option">{{ statusLabels[option] }}</option>
+        }
+      </select>
+    </label>
+
+    <div class="actions form-grid__wide">
+      <button type="submit" class="btn btn--primary" [disabled]="!canSubmit()">
+        {{ busy() ? 'Saving…' : submitLabel() }}
+      </button>
+      <button type="button" class="btn" (click)="cancelled.emit()">Cancel</button>
+    </div>
+  </fieldset>
+</form>

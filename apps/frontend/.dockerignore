@@ -1,0 +1,15 @@
+# Host installs and build output are rebuilt inside the image.
+node_modules
+dist
+.angular
+coverage
+out-tsc
+
+.env
+.env.*
+
+.vscode
+Dockerfile
+.dockerignore
+*.log
+README.md

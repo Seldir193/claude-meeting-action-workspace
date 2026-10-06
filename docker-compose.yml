@@ -1,0 +1,89 @@
+# Full local stack for Project 05: PostgreSQL + NestJS API + Angular (nginx).
+#
+#   docker compose up -d db        database only (local development and e2e tests)
+#   docker compose up --build      whole stack: http://localhost:4205
+#
+# Host ports: db 5435, backend 3001, frontend 4205.
+# Optional overrides and ANTHROPIC_API_KEY come from a root .env file (see .env.example).
+
+name: claude-meeting-action-workspace
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-meeting}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-meeting}
+      POSTGRES_DB: ${POSTGRES_DB:-meeting_workspace}
+    ports:
+      # Host port 5435 avoids clashing with other local PostgreSQL instances on 5432.
+      - "${POSTGRES_PORT:-5435}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # One-shot job: applies Prisma migrations, then exits. The backend waits for it.
+  migrate:
+    build:
+      context: ./apps/backend
+      target: migrate
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-meeting}:${POSTGRES_PASSWORD:-meeting}@db:5432/${POSTGRES_DB:-meeting_workspace}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: ./apps/backend
+      target: runtime
+    restart: unless-stopped
+    # Forwards SIGTERM to Node so `docker compose down` stops the API promptly.
+    init: true
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-meeting}:${POSTGRES_PASSWORD:-meeting}@db:5432/${POSTGRES_DB:-meeting_workspace}
+      PORT: "3001"
+      # Must match the origin the frontend container is served from.
+      CORS_ORIGIN: http://localhost:4205
+      # Backend-only secret, passed through from the shell or the root .env file.
+      # Empty is fine: the API starts and only the analyze endpoint answers 503.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
+      # "anthropic" (default) or "fake" for a deterministic canned analysis without a key.
+      MEETING_ANALYZER: ${MEETING_ANALYZER:-anthropic}
+    ports:
+      # Fixed: the frontend bundle calls http://localhost:3001/api.
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3001/api/meetings').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./apps/frontend
+    restart: unless-stopped
+    ports:
+      - "4205:80"
+    depends_on:
+      - backend
+
+volumes:
+  db-data:

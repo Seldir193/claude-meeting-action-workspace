@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  // Pinned explicitly: without these Prisma infers them from a nearby tsconfig.json.
+  // `prisma generate` runs during `npm ci` (postinstall) before tsconfig.json exists in
+  // the Docker image, which made the generated imports end in `.ts` and broke `node dist/main.js`.
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ActionItemStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+}
+
+enum ActionItemPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+// Who put the action item into the workspace: Claude's proposal or a human.
+enum ActionItemSource {
+  AI
+  HUMAN
+}
+
+model Meeting {
+  id         String    @id @default(uuid())
+  title      String
+  notes      String
+  createdAt  DateTime  @default(now())
+  analyzedAt DateTime?
+
+  analysis    MeetingAnalysis?
+  actionItems ActionItem[]
+}
+
+model MeetingAnalysis {
+  id               String    @id @default(uuid())
+  meetingId        String    @unique
+  summary          String
+  decisions        String[]
+  openQuestions    String[]
+  followUpRequired Boolean
+  followUpDate     DateTime? @db.Date
+  model            String
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+}
+
+model ActionItem {
+  id        String             @id @default(uuid())
+  meetingId String
+  task      String
+  owner     String?
+  deadline  DateTime?          @db.Date
+  priority  ActionItemPriority @default(MEDIUM)
+  status    ActionItemStatus   @default(OPEN)
+  source    ActionItemSource   @default(HUMAN)
+  // True once a human created or edited the item; such items survive re-analysis.
+  humanReviewed Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+}

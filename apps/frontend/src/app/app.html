@@ -1,0 +1,246 @@
+<header class="topbar">
+  <h1 class="topbar__title">Meeting &amp; Action Workspace</h1>
+  <p class="topbar__tagline">Meeting notes → Claude proposal → human-reviewed tasks</p>
+</header>
+
+<main class="workspace">
+  <!-- Left: meetings -->
+  <aside class="panel meetings" aria-labelledby="meetings-heading">
+    <div class="panel__head">
+      <h2 id="meetings-heading">Meetings</h2>
+      @if (!createOpen()) {
+        <button type="button" class="btn" (click)="showCreate.set(true)">New meeting</button>
+      }
+    </div>
+
+    @if (createOpen()) {
+      <form class="create" (ngSubmit)="createMeeting()">
+        <fieldset class="create__fields" [disabled]="creating()">
+          <label class="field">
+            <span class="field__label">Title</span>
+            <input name="title" type="text" maxlength="200" required [(ngModel)]="newTitle" />
+          </label>
+          <label class="field">
+            <span class="field__label">Notes</span>
+            <textarea
+              name="notes"
+              rows="6"
+              maxlength="50000"
+              required
+              placeholder="Paste the raw meeting notes"
+              [(ngModel)]="newNotes"
+            ></textarea>
+          </label>
+          <div class="actions">
+            <button type="submit" class="btn btn--primary" [disabled]="!canCreate()">
+              {{ creating() ? 'Creating…' : 'Create meeting' }}
+            </button>
+            @if (meetings().length > 0) {
+              <button type="button" class="btn" (click)="showCreate.set(false)">Cancel</button>
+            }
+          </div>
+        </fieldset>
+        @if (createError(); as message) {
+          <p class="alert alert--error" role="alert">{{ message }}</p>
+        }
+      </form>
+    }
+
+    @if (listLoading()) {
+      <p class="state" aria-busy="true">Loading meetings…</p>
+    } @else if (listError()) {
+      <div class="alert alert--error" role="alert">
+        <p>{{ listError() }}</p>
+        <button type="button" class="btn" (click)="loadMeetings()">Retry</button>
+      </div>
+    } @else if (meetings().length === 0) {
+      <p class="state">No meetings yet. Create the first one above.</p>
+    } @else {
+      <ul class="meeting-list">
+        @for (meeting of meetings(); track meeting.id) {
+          <li>
+            <button
+              type="button"
+              class="meeting"
+              [class.meeting--selected]="meeting.id === selectedId()"
+              [attr.aria-current]="meeting.id === selectedId() ? 'true' : null"
+              [disabled]="analyzing()"
+              (click)="select(meeting.id)"
+            >
+              <span class="meeting__title">{{ meeting.title }}</span>
+              <span class="meeting__meta">
+                {{ meeting.createdAt | date: 'mediumDate' }}
+                <span class="badge" [attr.data-analyzed]="!!meeting.analyzedAt">
+                  {{ meeting.analyzedAt ? 'Analyzed' : 'Not analyzed' }}
+                </span>
+              </span>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </aside>
+
+  @if (detail(); as meeting) {
+    <!-- Center: the human-written source -->
+    <section class="panel notes" aria-labelledby="notes-heading">
+      <div class="panel__head">
+        <div>
+          <h2 id="notes-heading" class="notes__title">{{ meeting.title }}</h2>
+          <p class="muted">Created {{ meeting.createdAt | date: 'medium' }}</p>
+        </div>
+        <button type="button" class="btn btn--primary" [disabled]="analyzing()" (click)="analyze()">
+          @if (analyzing()) {
+            Analyzing…
+          } @else {
+            {{ meeting.analyzedAt ? 'Re-analyze with Claude' : 'Analyze with Claude' }}
+          }
+        </button>
+      </div>
+
+      @if (analyzing()) {
+        <p class="state" aria-busy="true">Claude is reading the notes. This can take a moment…</p>
+      }
+      @if (analyzeError(); as message) {
+        <p class="alert alert--error" role="alert">{{ message }}</p>
+      }
+      @if (meeting.analyzedAt) {
+        <p class="muted">
+          Re-analysis replaces AI proposals nobody has touched. Human-created and human-reviewed items
+          are kept.
+        </p>
+      }
+
+      <h3>Original notes</h3>
+      <p class="notes__body">{{ meeting.notes }}</p>
+    </section>
+
+    <!-- Right / below: Claude's proposal and the human-owned tasks -->
+    <section class="panel ai" aria-labelledby="ai-heading">
+      <div class="panel__head">
+        <h2 id="ai-heading">AI Workspace</h2>
+        @if (meeting.analysis; as analysis) {
+          <span class="muted">{{ analysis.model }} · {{ meeting.analyzedAt | date: 'medium' }}</span>
+        }
+      </div>
+
+      <p class="alert alert--review" role="note">
+        AI analysis is a proposal and requires human review.
+      </p>
+
+      @if (meeting.analysis; as analysis) {
+        <section class="block">
+          <h3>Summary</h3>
+          <p>{{ analysis.summary }}</p>
+        </section>
+
+        <section class="block">
+          <h3>Decisions</h3>
+          @if (analysis.decisions.length > 0) {
+            <ul>
+              @for (decision of analysis.decisions; track $index) {
+                <li>{{ decision }}</li>
+              }
+            </ul>
+          } @else {
+            <p class="muted">No decisions found in the notes.</p>
+          }
+        </section>
+
+        <section class="block">
+          <h3>Open questions</h3>
+          @if (analysis.openQuestions.length > 0) {
+            <ul>
+              @for (question of analysis.openQuestions; track $index) {
+                <li>{{ question }}</li>
+              }
+            </ul>
+          } @else {
+            <p class="muted">No open questions found in the notes.</p>
+          }
+        </section>
+
+        <section class="block">
+          <h3>Follow-up</h3>
+          @if (analysis.followUpRequired) {
+            <p>
+              Follow-up required
+              @if (analysis.followUpDate) {
+                by <strong>{{ analysis.followUpDate | date: 'mediumDate' }}</strong>
+              } @else {
+                <span class="muted">— no date mentioned in the notes</span>
+              }
+            </p>
+          } @else {
+            <p class="muted">No follow-up required.</p>
+          }
+        </section>
+      } @else {
+        <p class="state">
+          Not analyzed yet. Run “Analyze with Claude” to get a proposed summary, decisions, open
+          questions and action items.
+        </p>
+      }
+
+      <section class="block">
+        <div class="panel__head">
+          <div>
+            <h3>Action items</h3>
+            <p class="muted">
+              {{ meeting.actionItems.length }} total · {{ awaitingReview() }} awaiting review
+            </p>
+          </div>
+          @if (!addingItem()) {
+            <button type="button" class="btn" [disabled]="analyzing()" (click)="addingItem.set(true)">
+              Add item
+            </button>
+          }
+        </div>
+
+        @if (addingItem()) {
+          <div class="add-item">
+            <app-action-item-form
+              [busy]="addBusy() || analyzing()"
+              submitLabel="Add item"
+              (submitted)="addItem($event)"
+              (cancelled)="addingItem.set(false)"
+            />
+            @if (addError(); as message) {
+              <p class="alert alert--error" role="alert">{{ message }}</p>
+            }
+          </div>
+        }
+
+        @if (meeting.actionItems.length === 0 && !addingItem()) {
+          <p class="state">No action items yet. Analyze the meeting or add one manually.</p>
+        }
+
+        <div class="items">
+          @for (item of meeting.actionItems; track item.id) {
+            <app-action-item-card
+              [item]="item"
+              [disabled]="analyzing()"
+              (saved)="onItemSaved($event)"
+              (deleted)="onItemDeleted($event)"
+            />
+          }
+        </div>
+      </section>
+    </section>
+  } @else {
+    <section class="panel placeholder">
+      @if (detailLoading()) {
+        <p class="state" aria-busy="true">Loading meeting…</p>
+      } @else if (detailError()) {
+        <div class="alert alert--error" role="alert">
+          <p>{{ detailError() }}</p>
+          @if (selectedId(); as id) {
+            <button type="button" class="btn" (click)="select(id)">Retry</button>
+          }
+        </div>
+      } @else {
+        <p class="state">Select a meeting, or create one, to open its workspace.</p>
+      }
+    </section>
+  }
+</main>

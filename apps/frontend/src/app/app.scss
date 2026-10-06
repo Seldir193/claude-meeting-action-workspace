@@ -1,0 +1,160 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.topbar {
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+
+  &__title {
+    margin: 0;
+    font-size: 1.125rem;
+  }
+
+  &__tagline {
+    margin: 0.125rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+}
+
+// One column on phones, list + stacked content on tablets, three columns on desktop.
+.workspace {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  align-items: start;
+
+  > * {
+    min-width: 0;
+  }
+
+  @media (min-width: 760px) {
+    grid-template-columns: 17rem minmax(0, 1fr);
+    gap: 1rem;
+    padding: 1rem;
+
+    .meetings {
+      grid-row: span 2;
+    }
+
+    .notes,
+    .ai,
+    .placeholder {
+      grid-column: 2;
+    }
+  }
+
+  @media (min-width: 1200px) {
+    grid-template-columns: 18rem minmax(0, 1fr) minmax(0, 1.15fr);
+
+    .meetings {
+      grid-row: auto;
+    }
+
+    .ai {
+      grid-column: 3;
+    }
+
+    .placeholder {
+      grid-column: 2 / -1;
+    }
+  }
+}
+
+.create,
+.create__fields,
+.block,
+.items,
+.add-item {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.create,
+.add-item {
+  padding: 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.meeting-list {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.meeting {
+  display: grid;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--bg);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  &--selected {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+
+  &__title {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+}
+
+.notes__title {
+  overflow-wrap: anywhere;
+}
+
+.notes__body {
+  margin: 0;
+  padding: 0.75rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.block {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+
+  ul {
+    margin: 0;
+    padding-left: 1.125rem;
+  }
+
+  li + li {
+    margin-top: 0.25rem;
+  }
+}
